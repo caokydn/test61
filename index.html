@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Listening & Drawing - Starters</title>
+<style>
+  body{
+    margin:0;
+    font-family: "Comic Sans MS", sans-serif;
+    background:#fef3c7;
+    text-align:center;
+  }
+
+  h1{
+    margin:10px 0;
+    color:#ec4899;
+    font-size: 16px; /* ví dụ giảm xuống 28px */
+  }
+
+  /* --- AUDIO CONTROLS --- */
+
+
+  #audioControls{
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    gap:10px;
+    margin:10px;
+    flex-wrap:wrap;
+  }
+
+  button{
+    padding:8px 16px;
+    font-size:16px;
+    border:none;
+    border-radius:10px;
+    cursor:pointer;
+    background:linear-gradient(90deg,#38bdf8,#0ea5e9);
+    color:#0f172a;
+    font-weight:bold;
+  }
+
+  button:disabled{
+    opacity:0.5;
+    cursor:not-allowed;
+  }
+
+  input[type=range]{ width:200px; }
+
+  /* --- DRAW AREA --- */
+#drawWrapper{
+  position: relative;
+  max-width: 900px;
+  max-height: 90vh;     /* 👈 khớp với ảnh */
+  margin: 0 auto;
+  touch-action: none;
+}
+
+
+#bgImage{
+  width: 100%;
+  max-height: 90vh;     /* 👈 không cao quá 90% màn hình */
+  object-fit: contain; /* 👈 giữ đúng tỉ lệ */
+  display: block;
+  margin: 0 auto;
+  border-radius: 12px;
+}
+
+
+  #drawCanvas{
+    position:absolute;
+    top:0;left:0;
+  }
+
+  /* --- BOTTOM CONTROLS --- */
+  #drawControls{
+    margin:12px;
+    display:flex;
+    justify-content:center;
+    gap:12px;
+    flex-wrap:wrap;
+  }
+
+  #doneBtn{
+    background:linear-gradient(90deg,#22c55e,#16a34a);
+  }
+
+
+/* --- WELCOME SCREEN --- */
+#welcomeScreen {
+  position: fixed;
+  inset: 0;
+  background: linear-gradient(135deg, #a5f3fc, #fbbfbc, #fde68a);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  color: #0f172a;
+  font-size: 16px;
+  text-align: center;
+}
+
+#welcomeScreen h2 {
+  font-size: 2.5em;
+  color: #f472b6;
+  margin-bottom: 20px;
+}
+
+#welcomeScreen input {
+  padding: 14px 28px;
+  font-size: 20px;
+  border: none;
+  border-radius: 14px;
+  margin-bottom: 20px;
+  width: 280px;
+  text-align: center;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+}
+
+#welcomeScreen button {
+  padding: 14px 28px;
+  font-size: 20px;
+  font-weight: bold;
+  border: none;
+  border-radius: 14px;
+  cursor: pointer;
+  background: linear-gradient(90deg, #38bdf8, #0ea5e9);
+  color: #0f172a;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+}
+
+
+</style>
+</head>
+<body>
+<div id="welcomeScreen">
+  <h2>🎉 Junior English chào mừng các em 🎉</h2>
+  <input type="text" id="studentName" placeholder="Nhập tên em...">
+  <button id="startBtn">Bắt đầu</button>
+</div>
+
+<div id="gameArea" style="display:none;">
+
+
+<h1>  🎉Junior English, 113 Lê Trọng Tấn, Đà Nẵng-0935.994359 🎉<br>
+Bài tập Listen & Draw</h1>
+
+  <div style="font-size:16px; font-weight:bold; color:#92400e;">
+    👉 Hướng dẫn: Các em vẽ trực tiếp vào ảnh để nối
+  </div>
+
+<!-- AUDIO -->
+<div id="audioControls">
+  <button id="playBtn">▶️ Play</button>
+<!--  <button id="replayBtn">🔁 Replay</button>    -->
+
+  <!-- 👇 thêm -->
+
+  <button id="back10Btn">⏪ 5s</button>
+  <button id="forward10Btn">⏩ 5s</button>
+
+
+  <input type="range" id="seekBar" min="0" max="100" value="0">
+  <span id="timeDisplay" style="font-weight:bold; min-width:90px;">00:00 / 00:00</span>
+</div>
+
+<!-- ACTION BUTTONS (UNDER AUDIO) -->
+<div id="drawControls" style="margin:8px; display:flex; justify-content:center; gap:12px; flex-wrap:wrap;">
+  <button id="undoBtn">⬅️ Undo</button>
+  <button id="redoBtn">➡️ Redo</button>
+  <button id="doneBtn">✅ Hoàn thành</button>
+</div>
+
+
+
+<!-- DRAW AREA -->
+<div id="drawWrapper">
+  <img id="bgImage" src="flashcard/picture.png" alt="Listening picture">
+  <canvas id="drawCanvas"></canvas>
+</div>
+
+
+
+<audio id="audio" src="flashcard/audio.mp3"></audio>
+
+<script>
+/* ================= IMAGE FALLBACK ================= */
+const img = document.getElementById("bgImage");
+img.onerror = ()=> img.src = "flashcard/picture.jpg";
+
+/* ================= AUDIO ================= */
+const audio = document.getElementById("audio");
+const playBtn = document.getElementById("playBtn");
+
+/* const replayBtn = document.getElementById("replayBtn");   */
+
+const seekBar = document.getElementById("seekBar");
+const timeDisplay = document.getElementById("timeDisplay");
+
+let audioEnabled = true;
+
+
+const back10Btn = document.getElementById("back10Btn");
+const forward10Btn = document.getElementById("forward10Btn");
+
+back10Btn.onclick = () => {
+  if(!audioEnabled) return;
+  audio.currentTime = Math.max(0, audio.currentTime - 5);
+  updateTime();
+};
+
+forward10Btn.onclick = () => {
+  if(!audioEnabled) return;
+  audio.currentTime = Math.min(audio.duration, audio.currentTime + 5);
+  updateTime();
+};
+
+
+
+playBtn.onclick = ()=>{
+  if(!audioEnabled) return;
+  if(audio.paused){ audio.play(); playBtn.textContent="⏸ Pause"; }
+  else{ audio.pause(); playBtn.textContent="▶️ Play"; }
+};
+
+/*
+replayBtn.onclick = ()=>{
+  if(!audioEnabled) return;
+  audio.currentTime = 0;
+  audio.play();
+  playBtn.textContent="⏸ Pause";
+};
+*/
+
+
+audio.ontimeupdate = ()=>{
+  seekBar.value = (audio.currentTime / audio.duration) * 100 || 0;
+  updateTime();
+};
+
+seekBar.oninput = ()=>{
+  if(!audioEnabled) return;
+  audio.currentTime = (seekBar.value/100) * audio.duration;
+  updateTime();
+};
+
+function formatTime(sec){
+  const m = Math.floor(sec / 60) || 0;
+  const s = Math.floor(sec % 60) || 0;
+  return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+}
+
+function updateTime(){
+  timeDisplay.textContent = `${formatTime(audio.currentTime)} / ${formatTime(audio.duration)}`;
+}
+
+/* ================= CANVAS DRAW ================= */
+const canvas = document.getElementById("drawCanvas");
+const ctx = canvas.getContext("2d");
+const wrapper = document.getElementById("drawWrapper");
+
+let strokes = [];
+let redoStack = [];
+let drawing = false;
+let currentStroke = null;
+let drawEnabled = true;
+
+function resizeCanvas(){
+  canvas.width = img.clientWidth;
+  canvas.height = img.clientHeight;
+  redraw();
+}
+
+img.onload = () => {
+  resizeCanvas();
+};window.addEventListener("resize", resizeCanvas);
+
+function randomColor(){
+  return `hsl(${Math.random()*360},80%,50%)`;
+}
+
+canvas.addEventListener("pointerdown", e=>{
+  if(!drawEnabled) return;
+  drawing = true;
+  redoStack = [];
+  currentStroke = { color: randomColor(), points: [] };
+  strokes.push(currentStroke);
+  addPoint(e);
+});
+
+canvas.addEventListener("pointermove", e=>{
+  if(!drawing) return;
+  addPoint(e);
+  redraw();
+});
+
+canvas.addEventListener("pointerup", ()=> drawing=false);
+canvas.addEventListener("pointerleave", ()=> drawing=false);
+
+function addPoint(e){
+  const rect = canvas.getBoundingClientRect();
+  currentStroke.points.push({
+    x: e.clientX - rect.left,
+    y: e.clientY - rect.top
+  });
+}
+
+function redraw(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  strokes.forEach(s=>{
+    ctx.strokeStyle = s.color;
+    ctx.lineWidth = 4;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    s.points.forEach((p,i)=>{
+      if(i===0) ctx.moveTo(p.x,p.y);
+      else ctx.lineTo(p.x,p.y);
+    });
+    ctx.stroke();
+  });
+}
+
+/* ================= UNDO / REDO ================= */
+const undoBtn = document.getElementById("undoBtn");
+const redoBtn = document.getElementById("redoBtn");
+
+undoBtn.onclick = ()=>{
+  if(!drawEnabled || strokes.length===0) return;
+  redoStack.push(strokes.pop());
+  redraw();
+};
+
+redoBtn.onclick = ()=>{
+  if(!drawEnabled || redoStack.length===0) return;
+  strokes.push(redoStack.pop());
+  redraw();
+};
+
+/* ================= DONE ================= */
+const doneBtn = document.getElementById("doneBtn");
+
+doneBtn.onclick = ()=>{
+  drawEnabled = false;
+  audioEnabled = false;
+  audio.pause();
+  playBtn.disabled = true;
+ /* replayBtn.disabled = true; */
+
+  back10Btn.disabled = true;
+  forward10Btn.disabled = true;
+  seekBar.disabled = true;
+  undoBtn.disabled = true;
+  redoBtn.disabled = true;
+  doneBtn.disabled = true;
+};
+
+/* ================= WELCOME SCREEN ================= */
+const welcomeScreen = document.getElementById("welcomeScreen");
+const startBtn = document.getElementById("startBtn");
+const studentNameInput = document.getElementById("studentName");
+const gameArea = document.getElementById("gameArea");
+
+let studentName = "";
+
+startBtn.onclick = () => {
+  studentName = studentNameInput.value.trim();
+  if(!studentName){
+    alert("Vui lòng nhập tên trước khi bắt đầu!");
+    return;
+  }
+  welcomeScreen.style.display = "none";
+  gameArea.style.display = "block";
+// 👇 QUAN TRỌNG: resize canvas sau khi game hiện
+  setTimeout(() => {
+    resizeCanvas();
+  }, 100);
+
+};
+
+
+</script>
+
+</div>
+</body>
+</html>
